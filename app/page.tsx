@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileText, Calendar, ListTodo, Loader2, X } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Container, Box, Typography, Button, TextField, Checkbox, FormControlLabel, Paper, Grid } from '@mui/material';
 
 interface UploadedFile {
@@ -22,6 +22,9 @@ export default function HomePage() {
   const [processedResult, setProcessedResult] = useState<any>(null);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set());
   const [editedEventTitles, setEditedEventTitles] = useState<{ [key: string]: string }>({});
+  const [editedEventDates, setEditedEventDates] = useState<{ [key: string]: string }>({});
+  const [editedEventTimes, setEditedEventTimes] = useState<{ [key: string]: string }>({});
+  const [editedEventDescriptions, setEditedEventDescriptions] = useState<{ [key: string]: string }>({});
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
@@ -117,6 +120,46 @@ export default function HomePage() {
     setEditedEventTitles(prev => ({ ...prev, [eventId]: newTitle }));
   };
 
+  const updateEventDate = (eventId: string, newDate: string) => {
+    setEditedEventDates(prev => ({ ...prev, [eventId]: newDate }));
+  };
+
+  const updateEventTime = (eventId: string, newTime: string) => {
+    setEditedEventTimes(prev => ({ ...prev, [eventId]: newTime }));
+  };
+
+  const updateEventDescription = (eventId: string, newDescription: string) => {
+    setEditedEventDescriptions(prev => ({ ...prev, [eventId]: newDescription }));
+  };
+
+  const deleteEvent = (eventId: string) => {
+    setProcessedResult((prev: any) => ({
+      ...prev,
+      calendarEvents: prev.calendarEvents.filter((e: any) => e.id !== eventId)
+    }));
+    setSelectedEvents(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(eventId);
+      return newSet;
+    });
+    setEditedEventTitles(prev => {
+      const { [eventId]: _, ...rest } = prev;
+      return rest;
+    });
+    setEditedEventDates(prev => {
+      const { [eventId]: _, ...rest } = prev;
+      return rest;
+    });
+    setEditedEventTimes(prev => {
+      const { [eventId]: _, ...rest } = prev;
+      return rest;
+    });
+    setEditedEventDescriptions(prev => {
+      const { [eventId]: _, ...rest } = prev;
+      return rest;
+    });
+  };
+
   const handleAddSelectedEvents = async () => {
     if (!processedResult?.calendarEvents) return;
 
@@ -125,6 +168,9 @@ export default function HomePage() {
       .map((e: any) => ({
         ...e,
         title: editedEventTitles[e.id] || e.title,
+        date: editedEventDates[e.id] || e.date,
+        time: editedEventTimes[e.id] !== undefined ? editedEventTimes[e.id] : e.time,
+        description: editedEventDescriptions[e.id] || e.description,
       }));
 
     if (eventsToAdd.length === 0) {
@@ -435,15 +481,50 @@ export default function HomePage() {
                         <TextField
                           fullWidth
                           variant="standard"
+                          label="Event Title"
                           value={editedEventTitles[event.id] !== undefined ? editedEventTitles[event.id] : event.title}
                           onChange={(e) => updateEventTitle(event.id, e.target.value)}
                           sx={{ mb: 1, '& input': { fontWeight: 'bold', fontSize: '1rem' } }}
                         />
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>{event.description}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {event.date} {event.time && `• ${event.time}`} {event.location && `• ${event.location}`}
-                        </Typography>
+                        <TextField
+                          fullWidth
+                          variant="standard"
+                          label="Description"
+                          multiline
+                          value={editedEventDescriptions[event.id] !== undefined ? editedEventDescriptions[event.id] : event.description}
+                          onChange={(e) => updateEventDescription(event.id, e.target.value)}
+                          sx={{ mb: 1 }}
+                        />
+                        <Box sx={{ display: 'flex', gap: 2, mb: 0.5 }}>
+                          <TextField
+                            variant="standard"
+                            label="Date (YYYY-MM-DD)"
+                            value={editedEventDates[event.id] !== undefined ? editedEventDates[event.id] : event.date}
+                            onChange={(e) => updateEventDate(event.id, e.target.value)}
+                            sx={{ flex: 1 }}
+                          />
+                          <TextField
+                            variant="standard"
+                            label="Time (optional)"
+                            value={editedEventTimes[event.id] !== undefined ? editedEventTimes[event.id] : (event.time || '')}
+                            onChange={(e) => updateEventTime(event.id, e.target.value)}
+                            sx={{ flex: 1 }}
+                          />
+                        </Box>
+                        {event.location && (
+                          <Typography variant="caption" color="text.secondary">
+                            Location: {event.location}
+                          </Typography>
+                        )}
                       </Box>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => deleteEvent(event.id)}
+                        sx={{ minWidth: 'auto', p: 1 }}
+                      >
+                        <Trash2 size={18} />
+                      </Button>
                     </Box>
                   </Box>
                 ))}
